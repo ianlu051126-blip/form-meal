@@ -236,6 +236,29 @@
       padding: 2px 7px; border-radius: 5px;
     }
 
+    /* Sold-out toggle */
+    .sold-out-row { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border); }
+    .sold-out-label { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+    .toggle-switch { position: relative; width: 36px; height: 20px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+    .toggle-track {
+      position: absolute; inset: 0; background: var(--surface2);
+      border: 1px solid var(--border2); border-radius: 10px; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .toggle-thumb {
+      position: absolute; top: 3px; left: 3px; width: 12px; height: 12px;
+      background: var(--dim); border-radius: 50%; transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked ~ .toggle-track { background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.5); }
+    .toggle-switch input:checked ~ .toggle-track .toggle-thumb { transform: translateX(16px); background: #f87171; }
+    .photo-card.sold-out .photo-preview::after {
+      content: '售完'; position: absolute; inset: 0;
+      background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 900; color: #f87171; letter-spacing: 0.1em;
+      pointer-events: none;
+    }
+
     /* ── Modal ── */
     .modal-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.8);
@@ -345,10 +368,12 @@
   <!-- ═══ PHOTOS TAB ═══ -->
   <div class="tab-content" id="tab-photos">
     <div class="photos-header">
-      <h2>Menu Photos</h2>
-      <p>Click a card to upload or replace a meal photo. Shown immediately on the customer site.</p>
+      <h2>Menu Photos &amp; Availability</h2>
+      <p>Upload photos and toggle sold-out status. Changes appear immediately on the customer site.</p>
     </div>
     <div class="photos-grid" id="photos-grid"></div>
+    <h3 style="font-size:13px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.1em;margin:28px 0 14px">Add-ons</h3>
+    <div class="photos-grid" id="addons-grid"></div>
   </div>
 
 </div>
@@ -383,12 +408,15 @@
     { id:6, nameEn:'Garlic Butter Shrimp Pasta',  nameZh:'蒜香奶油蝦義大利麵',    emoji:'🦐', gradient:'linear-gradient(145deg,#181410,#241c10)' },
     { id:7, nameEn:'Creamy Chicken Pasta',         nameZh:'奶油雞腿蘆筍義大利麵',  emoji:'🍝', gradient:'linear-gradient(145deg,#16100a,#201808)' },
     { id:8, nameEn:'Spicy Creamy Salmon Pasta',   nameZh:'辣奶油鮭魚義大利麵',    emoji:'🌶️', gradient:'linear-gradient(145deg,#1c100a,#281810)' },
+    { id:9,  nameEn:'Luné Yogurt Bowl',           nameZh:'Luné 酸奶碗',           emoji:'🥛', gradient:'linear-gradient(145deg,#101820,#182030)', addon:true },
+    { id:10, nameEn:'Protein Shake',              nameZh:'蛋白粉奶昔',             emoji:'🥤', gradient:'linear-gradient(145deg,#101020,#181828)', addon:true },
   ]
 
   /* ══════════════════════════ STATE ══════════════════════════ */
   let currentFilter = 'all'
   let allOrders = []
-  let currentImages = {}  // { itemId: '/uploads/...' }
+  let currentImages = {}        // { itemId: '/uploads/...' }
+  let currentAvailability = {}  // { itemId: soldOut (bool) }
   let activeTab = 'orders'
 
   const STATUS_LABELS = {
@@ -454,8 +482,12 @@
 
   async function loadImages() {
     try {
-      const r = await fetch(`${API}/api/images`)
-      currentImages = await r.json()
+      const [imgRes, availRes] = await Promise.all([
+        fetch(`${API}/api/images`),
+        fetch(`${API}/api/availability`),
+      ])
+      currentImages = await imgRes.json()
+      currentAvailability = await availRes.json()
       renderPhotos()
     } catch {
       showToast('⚠️ Could not load images')
@@ -558,13 +590,19 @@
 
   /* ══════════════════════════ PHOTOS RENDER ══════════════════════════ */
   function renderPhotos() {
-    const grid = document.getElementById('photos-grid')
-    grid.innerHTML = MENU_ITEMS_META.map(item => {
+    const mainItems  = MENU_ITEMS_META.filter(i => !i.addon)
+    const addonItems = MENU_ITEMS_META.filter(i => i.addon)
+    document.getElementById('photos-grid').innerHTML  = mainItems.map(photoCard).join('')
+    document.getElementById('addons-grid').innerHTML  = addonItems.map(photoCard).join('')
+  }
+
+  function photoCard(item) {
       const imgUrl = currentImages[item.id] ? `${API}${currentImages[item.id]}` : null
       const hasImg = !!imgUrl
+      const soldOut = !!currentAvailability[item.id]
 
       return `
-        <div class="photo-card ${hasImg?'has-image':''}" id="pcard-${item.id}">
+        <div class="photo-card ${hasImg?'has-image':''} ${soldOut?'sold-out':''}" id="pcard-${item.id}">
           <div class="photo-preview" onclick="triggerUpload(${item.id})" id="preview-${item.id}">
             ${hasImg
               ? `<img src="${imgUrl}?t=${Date.now()}" alt="${item.nameEn}" id="img-${item.id}" />`
@@ -586,6 +624,13 @@
               </button>
               ${hasImg ? `<button class="btn btn-danger btn-sm" onclick="removePhoto(${item.id})">🗑</button>` : ''}
             </div>
+            <div class="sold-out-row">
+              <span class="sold-out-label">售完 Sold Out</span>
+              <label class="toggle-switch">
+                <input type="checkbox" ${soldOut ? 'checked' : ''} onchange="toggleSoldOut(${item.id}, this.checked)" />
+                <div class="toggle-track"><div class="toggle-thumb"></div></div>
+              </label>
+            </div>
           </div>
           <input
             type="file" id="file-${item.id}"
@@ -594,7 +639,6 @@
             onchange="uploadPhoto(${item.id}, this)"
           />
         </div>`
-    }).join('')
   }
 
   function triggerUpload(itemId) {
@@ -630,6 +674,23 @@
 
     input.value = ''
     preview.classList.remove('uploading')
+  }
+
+  async function toggleSoldOut(itemId, soldOut) {
+    try {
+      await fetch(`${API}/api/availability/${itemId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ soldOut }),
+      })
+      currentAvailability[itemId] = soldOut
+      const card = document.getElementById(`pcard-${itemId}`)
+      if (card) card.classList.toggle('sold-out', soldOut)
+      const meta = MENU_ITEMS_META.find(m => m.id === itemId)
+      showToast(soldOut ? `🚫 ${meta?.nameEn} 已售完` : `✓ ${meta?.nameEn} 已開放`)
+    } catch {
+      showToast('⚠️ Failed to update availability')
+    }
   }
 
   async function removePhoto(itemId) {

@@ -46,6 +46,11 @@ db.exec(`
     filename   TEXT NOT NULL,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS menu_availability (
+    item_id   INTEGER PRIMARY KEY,
+    sold_out  INTEGER NOT NULL DEFAULT 0,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `)
 
 /* ── Multer ── */
@@ -118,6 +123,29 @@ app.delete('/api/images/:itemId', (req, res) => {
     } catch {}
     db.prepare('DELETE FROM menu_images WHERE item_id = ?').run(itemId)
   }
+  res.json({ success: true })
+})
+
+/* ════════════════ AVAILABILITY ROUTES ════════════════ */
+
+// GET /api/availability — { itemId: soldOut (bool) }
+app.get('/api/availability', (req, res) => {
+  const rows = db.prepare('SELECT item_id, sold_out FROM menu_availability').all()
+  const map = {}
+  rows.forEach((r) => { map[r.item_id] = r.sold_out === 1 })
+  res.json(map)
+})
+
+// PATCH /api/availability/:itemId — { soldOut: bool }
+app.patch('/api/availability/:itemId', (req, res) => {
+  const { itemId } = req.params
+  const { soldOut } = req.body
+  if (typeof soldOut !== 'boolean') return res.status(400).json({ error: 'soldOut must be boolean' })
+  db.prepare(`
+    INSERT INTO menu_availability (item_id, sold_out) VALUES (?, ?)
+    ON CONFLICT(item_id) DO UPDATE SET sold_out = excluded.sold_out, updated_at = CURRENT_TIMESTAMP
+  `).run(itemId, soldOut ? 1 : 0)
+  console.log(`[AVAILABILITY] Item #${itemId} → ${soldOut ? 'sold out' : 'available'}`)
   res.json({ success: true })
 })
 

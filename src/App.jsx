@@ -590,17 +590,27 @@ function GoalBadge({ goal }) {
 
 /* ═══════════════════════════ MENU CARD ═══════════════════════════ */
 
-function MenuCard({ item, quantity, onAdd, onRemove, recommended, imageUrl }) {
+function MenuCard({ item, quantity, onAdd, onRemove, recommended, imageUrl, soldOut }) {
   return (
     <div
       className={`relative flex flex-col bg-stone-900 rounded-3xl overflow-hidden border transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/60 ${
-        recommended
+        soldOut
+          ? 'border-red-900/50 opacity-70'
+          : recommended
           ? 'border-olive-600/50 shadow-lg shadow-olive-950/20'
           : 'border-stone-800/60'
       }`}
     >
+      {/* Sold-out overlay */}
+      {soldOut && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-[1px] pointer-events-none">
+          <span className="text-red-400 font-black text-lg tracking-widest uppercase">售完</span>
+          <span className="text-red-500/80 text-xs font-semibold tracking-wide mt-0.5">Sold Out</span>
+        </div>
+      )}
+
       {/* Recommended badge */}
-      {recommended && (
+      {recommended && !soldOut && (
         <div className="absolute top-3 left-3 z-10 bg-olive-600 text-white text-[9px] font-black tracking-widest uppercase px-2.5 py-1 rounded-lg shadow-lg">
           ★ Recommended
         </div>
@@ -677,7 +687,9 @@ function MenuCard({ item, quantity, onAdd, onRemove, recommended, imageUrl }) {
         <div className="flex items-center justify-between">
           <span className="text-white font-black text-xl">${item.price.toFixed(2)}</span>
 
-          {quantity === 0 ? (
+          {soldOut ? (
+            <span className="text-red-500/70 text-xs font-bold uppercase tracking-wider">售完</span>
+          ) : quantity === 0 ? (
             <button
               onClick={() => onAdd(item.id)}
               className="bg-olive-600 hover:bg-olive-500 text-white font-semibold text-sm px-5 py-2.5 rounded-xl transition-all duration-200 active:scale-[0.95] flex items-center gap-1.5"
@@ -711,7 +723,7 @@ function MenuCard({ item, quantity, onAdd, onRemove, recommended, imageUrl }) {
 
 /* ═══════════════════════════ MENU SECTION ═══════════════════════════ */
 
-function MenuSection({ cart, onAdd, onRemove, selectedGoal, mealImages }) {
+function MenuSection({ cart, onAdd, onRemove, selectedGoal, mealImages, availability }) {
   const bowls = MENU_ITEMS.filter((i) => i.section === 'bowls')
   const pastas = MENU_ITEMS.filter((i) => i.section === 'pastas')
 
@@ -728,6 +740,7 @@ function MenuSection({ cart, onAdd, onRemove, selectedGoal, mealImages }) {
           onRemove={onRemove}
           recommended={isRecommended(item)}
           imageUrl={mealImages?.[item.id]}
+          soldOut={!!availability?.[item.id]}
         />
       ))}
     </div>
@@ -790,7 +803,10 @@ function MenuSection({ cart, onAdd, onRemove, selectedGoal, mealImages }) {
 
 /* ═══════════════════════════ ADDONS ═══════════════════════════ */
 
-function AddonsSection({ addons, onToggle }) {
+// Maps ADDONS id strings to availability item IDs (9=yogurt, 10=shake)
+const ADDON_AVAIL_ID = { yogurt: 9, shake: 10 }
+
+function AddonsSection({ addons, onToggle, availability }) {
   return (
     <section className="bg-black py-12 sm:py-16 border-t border-white/[0.05]">
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
@@ -804,35 +820,46 @@ function AddonsSection({ addons, onToggle }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {ADDONS.map((addon) => {
             const checked = addons[addon.id]
+            const soldOut = !!availability?.[ADDON_AVAIL_ID[addon.id]]
             return (
               <button
                 key={addon.id}
-                onClick={() => onToggle(addon.id)}
-                className={`flex items-center gap-4 p-5 sm:p-6 rounded-2xl border-2 text-left transition-all duration-200 active:scale-[0.98] ${
-                  checked
+                onClick={() => !soldOut && onToggle(addon.id)}
+                disabled={soldOut}
+                className={`relative flex items-center gap-4 p-5 sm:p-6 rounded-2xl border-2 text-left transition-all duration-200 active:scale-[0.98] ${
+                  soldOut
+                    ? 'border-red-900/40 bg-stone-900/30 opacity-60 cursor-not-allowed'
+                    : checked
                     ? 'border-olive-600/70 bg-olive-950/30'
                     : 'border-stone-800 bg-stone-900/40 hover:border-stone-700 hover:bg-stone-900/70'
                 }`}
               >
+                {soldOut && (
+                  <div className="absolute top-2 right-2 bg-red-900/80 text-red-300 text-[9px] font-black tracking-widest uppercase px-2 py-0.5 rounded-md">
+                    售完
+                  </div>
+                )}
                 <span className="text-4xl flex-shrink-0">{addon.emoji}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-white font-bold text-sm">{addon.name}</span>
-                    <span className={`font-black text-sm flex-shrink-0 ${checked ? 'text-olive-300' : 'text-stone-300'}`}>
+                    <span className={`font-black text-sm flex-shrink-0 ${checked && !soldOut ? 'text-olive-300' : 'text-stone-300'}`}>
                       +${addon.price.toFixed(2)}
                     </span>
                   </div>
                   <p className="text-stone-500 text-xs leading-snug">{addon.desc}</p>
                 </div>
-                <div
-                  className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
-                    checked
-                      ? 'bg-olive-600 border-olive-600'
-                      : 'border-stone-600'
-                  }`}
-                >
-                  {checked && <IconCheck size={10} />}
-                </div>
+                {!soldOut && (
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                      checked
+                        ? 'bg-olive-600 border-olive-600'
+                        : 'border-stone-600'
+                    }`}
+                  >
+                    {checked && <IconCheck size={10} />}
+                  </div>
+                )}
               </button>
             )
           })}
@@ -1218,11 +1245,16 @@ export default function App() {
 
   const menuRef = useRef(null)
   const [mealImages, setMealImages] = useState({})
+  const [availability, setAvailability] = useState({})
 
   useEffect(() => {
     fetch(`${API_BASE}/api/images`)
       .then((r) => r.json())
       .then(setMealImages)
+      .catch(() => {})
+    fetch(`${API_BASE}/api/availability`)
+      .then((r) => r.json())
+      .then(setAvailability)
       .catch(() => {})
   }, [])
 
@@ -1412,9 +1444,10 @@ export default function App() {
             onRemove={handleRemove}
             selectedGoal={selectedGoal}
             mealImages={mealImages}
+            availability={availability}
           />
         </div>
-        <AddonsSection addons={addons} onToggle={handleAddonToggle} />
+        <AddonsSection addons={addons} onToggle={handleAddonToggle} availability={availability} />
       </main>
 
       <Footer />
