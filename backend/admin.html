@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FORM Meals — Admin</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0a0a0a;
+      --surface:   #111111;
+      --surface2:  #181818;
+      --border:    rgba(255,255,255,0.07);
+      --border2:   rgba(255,255,255,0.13);
+      --text:      #ffffff;
+      --muted:     #888888;
+      --dim:       #444444;
+      --olive:     #6b8c4e;
+      --olive-l:   #89b063;
+      --olive-d:   #4a6335;
+
+      --new:           #38bdf8;
+      --new-bg:        rgba(14,165,233,0.12);
+      --new-b:         rgba(14,165,233,0.25);
+      --confirmed:     #fbbf24;
+      --confirmed-bg:  rgba(245,158,11,0.12);
+      --confirmed-b:   rgba(245,158,11,0.25);
+      --preparing:     #fb923c;
+      --preparing-bg:  rgba(249,115,22,0.12);
+      --preparing-b:   rgba(249,115,22,0.25);
+      --ready:         #c084fc;
+      --ready-bg:      rgba(192,132,252,0.12);
+      --ready-b:       rgba(192,132,252,0.25);
+      --done:          #4ade80;
+      --done-bg:       rgba(34,197,94,0.12);
+      --done-b:        rgba(34,197,94,0.25);
+      --cancelled:     #f87171;
+      --cancelled-bg:  rgba(239,68,68,0.12);
+      --cancelled-b:   rgba(239,68,68,0.25);
+    }
+
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-size: 14px; -webkit-font-smoothing: antialiased; }
+
+    /* ── Header ── */
+    .header {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(10,10,10,0.96); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 20px; height: 56px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .logo-form { font-weight: 900; font-size: 16px; letter-spacing: -0.03em; }
+    .logo-sep { width: 1px; height: 14px; background: rgba(255,255,255,0.15); }
+    .logo-sub { color: var(--muted); font-size: 11px; letter-spacing: 0.25em; text-transform: uppercase; }
+    .logo-badge { background: var(--olive-d); color: #b5d48a; font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+
+    /* ── Main tabs (Orders / Photos) ── */
+    .main-tabs {
+      display: flex; gap: 2px; background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 12px; padding: 3px;
+    }
+    .main-tab {
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 6px 14px; border-radius: 9px; border: none;
+      background: transparent; color: var(--muted); cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .main-tab:hover { color: var(--text); }
+    .main-tab.active { background: var(--olive-d); color: #c5e49a; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 10px; border: none; cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-ghost  { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: var(--border2); background: rgba(255,255,255,0.04); }
+    .btn-olive  { background: var(--olive); color: #fff; border: 1px solid transparent; }
+    .btn-olive:hover { background: var(--olive-l); }
+    .btn-danger { background: rgba(239,68,68,0.12); color: #f87171; border: 1px solid rgba(239,68,68,0.2); }
+    .btn-danger:hover { background: rgba(239,68,68,0.2); }
+    .btn-sm { padding: 5px 10px; font-size: 11px; border-radius: 8px; }
+
+    /* ── Layout ── */
+    .main { max-width: 1100px; margin: 0 auto; padding: 24px 20px 80px; }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 12px; margin-bottom: 24px; }
+    @media(min-width:640px){ .stats-grid { grid-template-columns: repeat(4,1fr); } }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 18px 16px; }
+    .stat-value { display: block; font-size: 26px; font-weight: 900; letter-spacing: -0.03em; line-height: 1; margin-bottom: 6px; }
+    .stat-label { font-size: 11px; color: var(--muted); font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+    .stat-card.highlight .stat-value { color: var(--olive-l); }
+
+    /* ── Filter tabs (orders) ── */
+    .toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-tabs { display: flex; gap: 6px; flex-wrap: wrap; flex: 1; }
+    .tab {
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 7px 14px; border-radius: 10px;
+      background: transparent; color: var(--muted);
+      border: 1px solid var(--border); cursor: pointer;
+      transition: all 0.15s; white-space: nowrap;
+    }
+    .tab:hover { color: var(--text); border-color: var(--border2); }
+    .tab.active { background: var(--olive-d); color: #c5e49a; border-color: var(--olive); }
+
+    /* ── Orders ── */
+    #orders-list { display: flex; flex-direction: column; gap: 14px; }
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--muted); border: 1px dashed var(--border); border-radius: 20px; }
+    .empty-state .icon { font-size: 40px; margin-bottom: 12px; opacity: 0.5; }
+
+    .order-card { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; transition: border-color 0.2s; }
+    .order-card:hover { border-color: var(--border2); }
+    .order-card.status-new      { border-left: 3px solid var(--new); }
+    .order-card.status-confirmed{ border-left: 3px solid var(--confirmed); }
+    .order-card.status-preparing{ border-left: 3px solid var(--preparing); }
+    .order-card.status-ready    { border-left: 3px solid var(--ready); }
+    .order-card.status-done     { border-left: 3px solid var(--done); opacity: 0.75; }
+    .order-card.status-cancelled{ border-left: 3px solid var(--cancelled); opacity: 0.6; }
+
+    .card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid var(--border); }
+    .card-header-left { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .order-id   { font-size: 11px; color: var(--dim); font-weight: 700; letter-spacing: 0.1em; }
+    .order-name { font-weight: 800; font-size: 15px; }
+    .order-time { font-size: 11px; color: var(--muted); }
+
+    .status-select {
+      font-family: inherit; font-size: 11px; font-weight: 700;
+      padding: 5px 10px; border-radius: 8px; cursor: pointer;
+      border: 1px solid; outline: none; appearance: none;
+    }
+    .status-select.status-new       { background: var(--new-bg);       color: var(--new);       border-color: var(--new-b); }
+    .status-select.status-confirmed { background: var(--confirmed-bg);  color: var(--confirmed); border-color: var(--confirmed-b); }
+    .status-select.status-preparing { background: var(--preparing-bg);  color: var(--preparing); border-color: var(--preparing-b); }
+    .status-select.status-ready     { background: var(--ready-bg);      color: var(--ready);     border-color: var(--ready-b); }
+    .status-select.status-done      { background: var(--done-bg);       color: var(--done);      border-color: var(--done-b); }
+    .status-select.status-cancelled { background: var(--cancelled-bg);  color: var(--cancelled); border-color: var(--cancelled-b); }
+
+    .card-body { padding: 14px 18px; display: flex; flex-direction: column; gap: 12px; }
+    .info-row { display: flex; flex-wrap: wrap; gap: 14px; }
+    .info-chip { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--muted); }
+    .info-chip strong { color: var(--text); font-weight: 600; }
+    .service-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 7px; }
+    .service-pickup  { background: rgba(107,140,78,0.15); color: var(--olive-l); border: 1px solid rgba(107,140,78,0.3); }
+    .service-delivery{ background: rgba(99,102,241,0.12); color: #a5b4fc; border: 1px solid rgba(99,102,241,0.25); }
+    .address-row { font-size: 12px; color: var(--muted); padding: 8px 12px; background: var(--surface2); border-radius: 10px; }
+    .address-row strong { color: var(--text); }
+    .divider { height: 1px; background: var(--border); }
+    .items-list { display: flex; flex-direction: column; gap: 6px; }
+    .item-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 8px; }
+    .item-row .item-name  { color: var(--text); flex: 1; min-width: 0; }
+    .item-row .item-qty   { color: var(--muted); white-space: nowrap; }
+    .item-row .item-price { color: var(--olive-l); font-weight: 700; white-space: nowrap; }
+    .addon-row { font-size: 12px; color: var(--muted); display: flex; justify-content: space-between; }
+    .total-row { display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid var(--border); }
+    .total-label { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+    .total-value { font-size: 20px; font-weight: 900; letter-spacing: -0.03em; }
+    .notes-box { font-size: 12px; color: var(--muted); background: var(--surface2); border-radius: 10px; padding: 10px 12px; border-left: 2px solid var(--olive-d); }
+    .notes-box strong { color: #c5e49a; }
+    .card-footer { padding: 12px 18px; display: flex; align-items: center; justify-content: space-between; gap: 10px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .card-meta { font-size: 11px; color: var(--dim); }
+
+    /* ════════════════ PHOTOS TAB ════════════════ */
+    .photos-header { margin-bottom: 24px; }
+    .photos-header h2 { font-size: 22px; font-weight: 900; letter-spacing: -0.02em; margin-bottom: 4px; }
+    .photos-header p  { font-size: 13px; color: var(--muted); }
+
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+    @media(min-width: 600px)  { .photos-grid { grid-template-columns: repeat(3, 1fr); } }
+    @media(min-width: 900px)  { .photos-grid { grid-template-columns: repeat(4, 1fr); } }
+
+    .photo-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .photo-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+    .photo-card.has-image { border-color: rgba(107,140,78,0.3); }
+
+    .photo-preview {
+      position: relative; height: 160px; cursor: pointer; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface2);
+    }
+    .photo-preview img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-emoji-placeholder {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 52px;
+    }
+
+    .photo-overlay {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.55); backdrop-filter: blur(2px);
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+      opacity: 0; transition: opacity 0.2s;
+    }
+    .photo-preview:hover .photo-overlay { opacity: 1; }
+    .overlay-icon { font-size: 28px; }
+    .overlay-label { font-size: 12px; font-weight: 700; color: #fff; letter-spacing: 0.05em; }
+
+    /* Upload progress ring */
+    .upload-spinner {
+      position: absolute; inset: 0; background: rgba(0,0,0,0.7);
+      display: none; align-items: center; justify-content: center;
+      font-size: 28px;
+    }
+    .uploading .upload-spinner { display: flex; }
+
+    .photo-info { padding: 12px 14px; }
+    .photo-name-en { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 2px; line-height: 1.3; }
+    .photo-name-zh { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .photo-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+
+    /* Has-image badge */
+    .photo-badge {
+      position: absolute; top: 8px; right: 8px;
+      background: rgba(107,140,78,0.85); color: #fff;
+      font-size: 9px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 5px;
+    }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.8);
+      backdrop-filter: blur(8px); z-index: 100;
+      display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    @media(min-width:640px){ .modal-overlay { align-items: center; } }
+    .modal {
+      background: var(--surface); border: 1px solid var(--border2);
+      border-radius: 24px 24px 0 0; width: 100%; max-width: 600px;
+      max-height: 85vh; display: flex; flex-direction: column;
+      transform: translateY(20px); transition: transform 0.25s;
+    }
+    @media(min-width:640px){ .modal { border-radius: 24px; } }
+    .modal-overlay.open .modal { transform: translateY(0); }
+    .modal-header { padding: 18px 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+    .modal-header h3 { font-weight: 800; font-size: 16px; }
+    .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
+    .modal-body pre { font-family: 'SF Mono','Fira Code',monospace; font-size: 12px; line-height: 1.7; color: #ccc; white-space: pre-wrap; word-break: break-word; background: var(--surface2); border: 1px solid var(--border); border-radius: 14px; padding: 16px; }
+    .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--surface2); border: 1px solid var(--border2);
+      color: var(--text); font-size: 13px; font-weight: 600;
+      padding: 10px 20px; border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.3s, transform 0.3s;
+      white-space: nowrap; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-4px); }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinning { animation: spin 1s linear infinite; display: inline-block; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="header">
+  <div class="logo">
+    <span class="logo-form">FORM</span>
+    <span class="logo-sep"></span>
+    <span class="logo-sub">Meals</span>
+    <span class="logo-badge">Admin</span>
+  </div>
+  <div class="header-actions">
+    <div class="main-tabs">
+      <button class="main-tab active" data-tab="orders">📋 Orders</button>
+      <button class="main-tab" data-tab="photos">🖼 Photos</button>
+    </div>
+    <span id="last-updated" style="font-size:11px;color:var(--dim);display:none" class="sm-only"></span>
+    <button class="btn btn-ghost" onclick="loadAll()">
+      <span id="refresh-icon">↻</span>
+    </button>
+  </div>
+</header>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- ═══ ORDERS TAB ═══ -->
+  <div class="tab-content active" id="tab-orders">
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card highlight">
+        <span class="stat-value" id="stat-today-count">—</span>
+        <span class="stat-label">Today's Orders</span>
+      </div>
+      <div class="stat-card highlight">
+        <span class="stat-value" id="stat-today-rev">—</span>
+        <span class="stat-label">Today's Revenue</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-pending">—</span>
+        <span class="stat-label">Pending</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="stat-total-rev">—</span>
+        <span class="stat-label">All-time Revenue</span>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="toolbar">
+      <div class="filter-tabs">
+        <button class="tab active" data-filter="all">All</button>
+        <button class="tab" data-filter="new">🔵 New</button>
+        <button class="tab" data-filter="confirmed">🟡 Confirmed</button>
+        <button class="tab" data-filter="preparing">🟠 Preparing</button>
+        <button class="tab" data-filter="ready">🟣 Ready</button>
+        <button class="tab" data-filter="done">🟢 Done</button>
+      </div>
+    </div>
+
+    <div id="orders-list"></div>
+  </div>
+
+  <!-- ═══ PHOTOS TAB ═══ -->
+  <div class="tab-content" id="tab-photos">
+    <div class="photos-header">
+      <h2>Menu Photos</h2>
+      <p>Click a card to upload or replace a meal photo. Shown immediately on the customer site.</p>
+    </div>
+    <div class="photos-grid" id="photos-grid"></div>
+  </div>
+
+</div>
+
+<!-- Order text modal -->
+<div class="modal-overlay" id="text-modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Order Text</h3>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body"><pre id="modal-text"></pre></div>
+    <div class="modal-footer">
+      <button class="btn btn-olive" style="width:100%" onclick="copyModalText()">📋 Copy to Clipboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  const API = 'http://localhost:3001'
+
+  /* ══════════════════════════ MENU ITEMS META ══════════════════════════ */
+  const MENU_ITEMS_META = [
+    { id:1, nameEn:'Black Pepper Chicken Bowl',    nameZh:'黑椒嫩雞腿能量碗',      emoji:'🍗', gradient:'linear-gradient(145deg,#1e1508,#2d2010)' },
+    { id:2, nameEn:'Garlic Butter Shrimp Bowl',    nameZh:'蒜香奶油檸檬蝦能量碗',  emoji:'🦐', gradient:'linear-gradient(145deg,#180e08,#281808)' },
+    { id:3, nameEn:'Garlic Salmon Bowl',           nameZh:'香煎鮭魚能量碗',        emoji:'🐟', gradient:'linear-gradient(145deg,#1c0c0a,#2a1210)' },
+    { id:4, nameEn:'Double Chicken Bulk Bowl',     nameZh:'雙倍炙燒雞腿增肌碗',    emoji:'🍗', gradient:'linear-gradient(145deg,#0c1a0e,#142416)' },
+    { id:5, nameEn:'Power Steak Bowl',             nameZh:'爆發力牛排能量碗',      emoji:'🥩', gradient:'linear-gradient(145deg,#1c0a0a,#2a1212)' },
+    { id:6, nameEn:'Garlic Butter Shrimp Pasta',  nameZh:'蒜香奶油蝦義大利麵',    emoji:'🦐', gradient:'linear-gradient(145deg,#181410,#241c10)' },
+    { id:7, nameEn:'Creamy Chicken Pasta',         nameZh:'奶油雞腿蘆筍義大利麵',  emoji:'🍝', gradient:'linear-gradient(145deg,#16100a,#201808)' },
+    { id:8, nameEn:'Spicy Creamy Salmon Pasta',   nameZh:'辣奶油鮭魚義大利麵',    emoji:'🌶️', gradient:'linear-gradient(145deg,#1c100a,#281810)' },
+  ]
+
+  /* ══════════════════════════ STATE ══════════════════════════ */
+  let currentFilter = 'all'
+  let allOrders = []
+  let currentImages = {}  // { itemId: '/uploads/...' }
+  let activeTab = 'orders'
+
+  const STATUS_LABELS = {
+    new:'🔵 New', confirmed:'🟡 Confirmed', preparing:'🟠 Preparing',
+    ready:'🟣 Ready', done:'🟢 Done', cancelled:'🔴 Cancelled',
+  }
+
+  /* ══════════════════════════ INIT ══════════════════════════ */
+  // Main tab switching
+  document.querySelectorAll('.main-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeTab = tab.dataset.tab
+      document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'))
+      tab.classList.add('active')
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'))
+      document.getElementById(`tab-${activeTab}`).classList.add('active')
+      if (activeTab === 'photos') loadImages()
+    })
+  })
+
+  // Order filter tabs
+  document.querySelectorAll('.filter-tabs .tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      currentFilter = tab.dataset.filter
+      document.querySelectorAll('.filter-tabs .tab').forEach(t => t.classList.remove('active'))
+      tab.classList.add('active')
+      renderOrders()
+    })
+  })
+
+  loadAll()
+  setInterval(loadAll, 60_000)
+
+  /* ══════════════════════════ DATA LOADING ══════════════════════════ */
+  async function loadAll() {
+    const icon = document.getElementById('refresh-icon')
+    icon.classList.add('spinning')
+    try {
+      await Promise.all([loadStats(), loadOrders()])
+      const el = document.getElementById('last-updated')
+      el.style.display = 'inline'
+      el.textContent = new Date().toLocaleTimeString('en-CA', { hour:'2-digit', minute:'2-digit' })
+    } catch {
+      showToast('⚠️ Cannot reach server')
+    }
+    icon.classList.remove('spinning')
+  }
+
+  async function loadStats() {
+    const r = await fetch(`${API}/api/stats`)
+    const s = await r.json()
+    document.getElementById('stat-today-count').textContent = s.today.count
+    document.getElementById('stat-today-rev').textContent   = '$' + s.today.revenue.toFixed(2)
+    document.getElementById('stat-pending').textContent     = s.pending
+    document.getElementById('stat-total-rev').textContent   = '$' + s.allTime.revenue.toFixed(2)
+  }
+
+  async function loadOrders() {
+    const r = await fetch(`${API}/api/orders`)
+    allOrders = await r.json()
+    renderOrders()
+  }
+
+  async function loadImages() {
+    try {
+      const r = await fetch(`${API}/api/images`)
+      currentImages = await r.json()
+      renderPhotos()
+    } catch {
+      showToast('⚠️ Could not load images')
+    }
+  }
+
+  /* ══════════════════════════ ORDERS RENDER ══════════════════════════ */
+  function renderOrders() {
+    const list = document.getElementById('orders-list')
+    const filtered = currentFilter === 'all' ? allOrders : allOrders.filter(o => o.status === currentFilter)
+
+    if (!filtered.length) {
+      list.innerHTML = `<div class="empty-state"><div class="icon">📭</div><p>No orders${currentFilter !== 'all' ? ` with status "${currentFilter}"` : ''} yet.</p></div>`
+      return
+    }
+    list.innerHTML = filtered.map(orderCard).join('')
+  }
+
+  function orderCard(o) {
+    const statusOptions = Object.entries(STATUS_LABELS)
+      .map(([v,l]) => `<option value="${v}" ${o.status===v?'selected':''}>${l}</option>`).join('')
+
+    const itemsHtml = (o.items||[]).map(i => `
+      <div class="item-row">
+        <span class="item-name">${i.nameEn}</span>
+        <span class="item-qty">× ${i.quantity}</span>
+        <span class="item-price">$${(i.price * i.quantity).toFixed(2)}</span>
+      </div>`).join('')
+
+    const addonsHtml = [
+      o.addons?.yogurt ? `<div class="addon-row"><span>Luné Yogurt Bowl</span><span>$10.99</span></div>` : '',
+      o.addons?.shake  ? `<div class="addon-row"><span>Protein Shake</span><span>$6.99</span></div>` : '',
+    ].join('')
+
+    const addressHtml = o.service_type === 'delivery' && o.address
+      ? `<div class="address-row">📍 <strong>Address:</strong> ${esc(o.address)}</div>` : ''
+
+    const notesHtml = o.notes
+      ? `<div class="notes-box"><strong>📝 Notes:</strong> ${esc(o.notes)}</div>` : ''
+
+    const dtLabel = new Date(o.created_at).toLocaleString('en-CA',
+      { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+
+    const requested = [
+      o.date ? `📅 ${o.date}` : '',
+      o.time ? `⏰ ${o.time}` : '',
+    ].filter(Boolean).join('  ·  ')
+
+    return `
+      <div class="order-card status-${o.status}" id="card-${o.id}">
+        <div class="card-header">
+          <div class="card-header-left">
+            <span class="order-id">#${o.id}</span>
+            <span class="order-name">${esc(o.name||'Unknown')}</span>
+            <span class="order-time">${dtLabel}</span>
+          </div>
+          <select class="status-select status-${o.status}" onchange="updateStatus(${o.id},this.value,this)">
+            ${statusOptions}
+          </select>
+        </div>
+
+        <div class="card-body">
+          <div class="info-row">
+            ${o.goal?`<div class="info-chip">🎯 <strong>${esc(o.goal)}</strong></div>`:''}
+            ${o.height?`<div class="info-chip">📏 <strong>${esc(o.height)} cm</strong></div>`:''}
+            ${o.weight?`<div class="info-chip">⚖️ <strong>${esc(o.weight)} kg</strong></div>`:''}
+            <div class="info-chip">
+              <span class="service-badge service-${o.service_type}">
+                ${o.service_type==='pickup'?'🏪 Pickup':'🚚 Delivery'}
+              </span>
+            </div>
+            ${requested?`<div class="info-chip" style="color:var(--text)">${requested}</div>`:''}
+          </div>
+
+          ${addressHtml}
+          <div class="divider"></div>
+
+          <div class="items-list">
+            ${itemsHtml}
+            ${addonsHtml}
+          </div>
+
+          <div class="total-row">
+            <span class="total-label">Total</span>
+            <span class="total-value">$${(o.total||0).toFixed(2)}</span>
+          </div>
+
+          ${notesHtml}
+        </div>
+
+        <div class="card-footer">
+          <span class="card-meta">Order #${o.id}</span>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            ${o.order_text?`<button class="btn btn-ghost btn-sm" onclick="showText(${o.id})">📋 Text</button>`:''}
+            <button class="btn btn-danger btn-sm" onclick="deleteOrder(${o.id})">🗑 Delete</button>
+          </div>
+        </div>
+      </div>`
+  }
+
+  /* ══════════════════════════ PHOTOS RENDER ══════════════════════════ */
+  function renderPhotos() {
+    const grid = document.getElementById('photos-grid')
+    grid.innerHTML = MENU_ITEMS_META.map(item => {
+      const imgUrl = currentImages[item.id] ? `${API}${currentImages[item.id]}` : null
+      const hasImg = !!imgUrl
+
+      return `
+        <div class="photo-card ${hasImg?'has-image':''}" id="pcard-${item.id}">
+          <div class="photo-preview" onclick="triggerUpload(${item.id})" id="preview-${item.id}">
+            ${hasImg
+              ? `<img src="${imgUrl}?t=${Date.now()}" alt="${item.nameEn}" id="img-${item.id}" />`
+              : `<div class="photo-emoji-placeholder" style="background:${item.gradient}">${item.emoji}</div>`
+            }
+            <div class="photo-overlay">
+              <div class="overlay-icon">📸</div>
+              <div class="overlay-label">${hasImg ? 'Change Photo' : 'Upload Photo'}</div>
+            </div>
+            ${hasImg ? '<div class="photo-badge">✓ Photo</div>' : ''}
+            <div class="upload-spinner" id="spinner-${item.id}">⏳</div>
+          </div>
+          <div class="photo-info">
+            <div class="photo-name-en">${item.nameEn}</div>
+            <div class="photo-name-zh">${item.nameZh}</div>
+            <div class="photo-actions">
+              <button class="btn btn-olive btn-sm" onclick="triggerUpload(${item.id})">
+                ${hasImg ? '🔄 Change' : '📸 Upload'}
+              </button>
+              ${hasImg ? `<button class="btn btn-danger btn-sm" onclick="removePhoto(${item.id})">🗑</button>` : ''}
+            </div>
+          </div>
+          <input
+            type="file" id="file-${item.id}"
+            accept="image/jpeg,image/jpg,image/png,image/webp,image/heic"
+            style="display:none"
+            onchange="uploadPhoto(${item.id}, this)"
+          />
+        </div>`
+    }).join('')
+  }
+
+  function triggerUpload(itemId) {
+    document.getElementById(`file-${itemId}`)?.click()
+  }
+
+  async function uploadPhoto(itemId, input) {
+    const file = input.files[0]
+    if (!file) return
+
+    const preview = document.getElementById(`preview-${itemId}`)
+    const spinner = document.getElementById(`spinner-${itemId}`)
+    preview.classList.add('uploading')
+    spinner.style.display = 'flex'
+
+    const formData = new FormData()
+    formData.append('image', file)
+
+    try {
+      const r = await fetch(`${API}/api/images/${itemId}`, { method: 'POST', body: formData })
+      const data = await r.json()
+
+      if (data.success) {
+        currentImages[itemId] = data.url
+        showToast('✓ Photo uploaded!')
+        renderPhotos()
+      } else {
+        showToast('⚠️ Upload failed')
+      }
+    } catch {
+      showToast('⚠️ Upload failed — check server')
+    }
+
+    input.value = ''
+    preview.classList.remove('uploading')
+  }
+
+  async function removePhoto(itemId) {
+    if (!confirm('Remove this photo? The emoji placeholder will be shown instead.')) return
+    try {
+      await fetch(`${API}/api/images/${itemId}`, { method: 'DELETE' })
+      delete currentImages[itemId]
+      showToast('Photo removed')
+      renderPhotos()
+    } catch {
+      showToast('⚠️ Failed to remove')
+    }
+  }
+
+  /* ══════════════════════════ ORDER ACTIONS ══════════════════════════ */
+  async function updateStatus(id, status, selectEl) {
+    try {
+      await fetch(`${API}/api/orders/${id}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      document.getElementById(`card-${id}`).className = `order-card status-${status}`
+      selectEl.className = `status-select status-${status}`
+      const o = allOrders.find(o => o.id === id)
+      if (o) o.status = status
+      showToast(`#${id} → ${STATUS_LABELS[status]}`)
+    } catch {
+      showToast('⚠️ Failed to update')
+    }
+  }
+
+  async function deleteOrder(id) {
+    if (!confirm(`Delete order #${id}? This cannot be undone.`)) return
+    try {
+      await fetch(`${API}/api/orders/${id}`, { method: 'DELETE' })
+      allOrders = allOrders.filter(o => o.id !== id)
+      renderOrders()
+      loadStats()
+      showToast(`Order #${id} deleted`)
+    } catch {
+      showToast('⚠️ Failed to delete')
+    }
+  }
+
+  function showText(id) {
+    const o = allOrders.find(o => o.id === id)
+    if (!o) return
+    document.getElementById('modal-text').textContent = o.order_text
+    document.getElementById('text-modal').classList.add('open')
+  }
+  function closeModal(e) {
+    if (!e || e.target === document.getElementById('text-modal'))
+      document.getElementById('text-modal').classList.remove('open')
+  }
+  async function copyModalText() {
+    const text = document.getElementById('modal-text').textContent
+    try { await navigator.clipboard.writeText(text) }
+    catch {
+      const el = Object.assign(document.createElement('textarea'), { value: text })
+      el.style.cssText = 'position:fixed;opacity:0'
+      document.body.appendChild(el); el.select(); document.execCommand('copy'); el.remove()
+    }
+    showToast('✓ Copied!')
+  }
+
+  /* ══════════════════════════ UTILS ══════════════════════════ */
+  function showToast(msg) {
+    const el = document.getElementById('toast')
+    el.textContent = msg; el.classList.add('show')
+    setTimeout(() => el.classList.remove('show'), 2500)
+  }
+
+  function esc(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')
+  }
+</script>
+</body>
+</html>
